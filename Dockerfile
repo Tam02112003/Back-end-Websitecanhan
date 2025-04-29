@@ -13,7 +13,13 @@ RUN dotnet publish -c Release -o /app/publish
 # Bước 4: Sử dụng hình ảnh .NET Runtime để chạy ứng dụng
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+
+# Cài đặt các thư viện cần thiết cho kết nối SQL Server
+RUN apt-get update && \
+    apt-get install -y krb5-user libgssapi-krb5-2 && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 # Bước 5: Chỉ định lệnh để chạy ứng dụng
-ENTRYPOINT ["dotnet", "Websitecanhan.dll"]  # Thay YourApp.dll bằng tên tệp của bạn
+ENTRYPOINT ["dotnet", "Websitecanhan.dll"]
