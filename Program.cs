@@ -20,16 +20,19 @@ builder.Services.AddSwaggerGen(c =>
 // Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAllOrigins",
-        builder => builder.AllowAnyOrigin()
-                          .AllowAnyMethod()
-                          .AllowAnyHeader());
+    options.AddPolicy("AllowGitHubPages",
+        builder => builder
+            .WithOrigins("https://tam02112003.github.io")
+            .AllowAnyMethod()
+            .AllowAnyHeader());
 });
 
 // Register services for Controllers
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+app.UseCors("AllowGitHubPages");
 
 // Configure middleware
 if (app.Environment.IsDevelopment())

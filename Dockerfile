@@ -13,17 +13,6 @@ RUN dotnet publish -c Release -o /app/publish
 # Bước 4: Sử dụng hình ảnh .NET Runtime để chạy ứng dụng
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-
-# Cài đặt các thư viện cần thiết cho AWS CLI (optional)
-RUN apt-get update && \
-    apt-get install -y curl unzip && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install && \
-    rm -rf awscliv2.zip aws && \
-    rm -rf /var/lib/apt/lists/*
-
+EXPOSE 8080
 COPY --from=build /app/publish .
-
-# Bước 5: Chỉ định lệnh để chạy ứng dụng
-ENTRYPOINT ["dotnet", "Websitecanhan.dll"]
+ENTRYPOINT ["dotnet", "Websitecanhan.dll", "--urls", "http://*:8080"]
