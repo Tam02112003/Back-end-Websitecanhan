@@ -1,17 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Amazon.DynamoDBv2.DataModel;
 using Websitecanhan.Models;
 
 [Route("api/[controller]")]
 [ApiController]
 public class ProjectsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IDynamoDBContext _context;
 
-    public ProjectsController(AppDbContext context)
+    public ProjectsController(IDynamoDBContext context)
     {
         _context = context;
     }
@@ -19,7 +16,9 @@ public class ProjectsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
     {
-        return await _context.Projects.ToListAsync();
+        var conditions = new List<ScanCondition>();
+        var projects = await _context.ScanAsync<Project>(conditions).GetRemainingAsync();
+        return projects;
     }
 
     [HttpGet("{id}")]
@@ -27,59 +26,50 @@ public class ProjectsController : ControllerBase
     {
         try
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _context.LoadAsync<Project>(id);
             if (project == null) return NotFound();
             return project;
-           
         }
         catch (Exception ex)
         {
-            // Ghi log lỗi
             Console.WriteLine(ex.Message);
             return StatusCode(500, "Internal server error");
         }
-
     }
 
     [HttpPost]
     public async Task<ActionResult<Project>> PostProject(Project project)
     {
-        _context.Projects.Add(project);
-        await _context.SaveChangesAsync();
+        await _context.SaveAsync(project);
         return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
     }
 
-    [HttpPut]
-    public async Task<IActionResult> PutProject([FromHeader(Name = "X-Project-ID")] int id, [FromBody] Project project)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutProject(int id, Project project)
     {
-        // Kiểm tra xem bản ghi có tồn tại không
-        var existingProject = await _context.Projects.FindAsync(id);
-        if (existingProject == null)
+        if (id != project.Id)
         {
-            return NotFound(); // Trả về 404 nếu không tìm thấy bản ghi
+            return BadRequest();
         }
 
-        // Kiểm tra xác thực mô hình
+        var existingProject = await _context.LoadAsync<Project>(id);
+        if (existingProject == null)
+        {
+            return NotFound();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        // Cập nhật các thuộc tính của project
-        existingProject.Name = project.Name;
-        existingProject.Description = project.Description;
-        existingProject.StartDate = project.StartDate;
-        existingProject.EndDate = project.EndDate;
-        existingProject.Technologies = project.Technologies;
-        existingProject.GitHubLink = project.GitHubLink;
-
         try
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveAsync(project);
         }
-        catch (DbUpdateConcurrencyException)
+        catch
         {
-            return StatusCode(500, "An error occurred while updating the project."); // Trả về lỗi 500 nếu có lỗi
+            return StatusCode(500, "An error occurred while updating the project.");
         }
 
         return NoContent();
@@ -88,12 +78,10 @@ public class ProjectsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProject(int id)
     {
-        var project = await _context.Projects.FindAsync(id);
+        var project = await _context.LoadAsync<Project>(id);
         if (project == null) return NotFound();
 
-        _context.Projects.Remove(project);
-        await _context.SaveChangesAsync();
+        await _context.DeleteAsync(project);
         return NoContent();
     }
-
 }

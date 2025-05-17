@@ -1,23 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Amazon.DynamoDBv2;
+using Amazon;
+using Amazon.DynamoDBv2.DataModel;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// Configure AWS DynamoDB
+builder.Services.AddAWSService<IAmazonDynamoDB>();
+builder.Services.AddSingleton<IDynamoDBContext, DynamoDBContext>();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-// Đăng ký Swagger
+// Register Swagger
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Website API", Version = "v1" });
 });
 
-// Cấu hình CORS
+// Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
@@ -26,12 +26,12 @@ builder.Services.AddCors(options =>
                           .AllowAnyHeader());
 });
 
-// Đăng ký dịch vụ cho Controllers
+// Register services for Controllers
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Cấu hình middleware
+// Configure middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -47,25 +47,19 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Thêm middleware CORS
+// Add CORS middleware
 app.UseCors("AllowAllOrigins");
 
 app.UseAuthorization();
 
-// Thêm Swagger
+// Add Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Website API V1");
-    c.RoutePrefix = "swagger"; // Hoặc để trống để truy cập tại root
+    c.RoutePrefix = "swagger";
 });
 
 app.MapControllers();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
 
 app.Run();

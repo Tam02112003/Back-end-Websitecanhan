@@ -1,14 +1,29 @@
-﻿namespace Websitecanhan.Models
+﻿using Amazon.DynamoDBv2.DataModel;
+
+namespace Websitecanhan.Models
 {
+    [DynamoDBTable("Projects")]
     public class Project
     {
+        [DynamoDBHashKey] // Partition key
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public string Technologies { get; set; }
-        public string GitHubLink { get; set; }
 
+        [DynamoDBProperty]
+        public string Name { get; set; }
+
+        [DynamoDBProperty]
+        public string Description { get; set; }
+
+        [DynamoDBProperty]
+        public DateTime? StartDate { get; set; }
+
+        [DynamoDBProperty]
+        public DateTime? EndDate { get; set; }
+
+        [DynamoDBProperty]
+        public string Technologies { get; set; }
+
+        [DynamoDBProperty]
+        public string GitHubLink { get; set; }
     }
 }

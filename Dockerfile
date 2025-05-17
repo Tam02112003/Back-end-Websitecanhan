@@ -14,9 +14,13 @@ RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Cài đặt các thư viện cần thiết cho kết nối SQL Server
+# Cài đặt các thư viện cần thiết cho AWS CLI (optional)
 RUN apt-get update && \
-    apt-get install -y krb5-user libgssapi-krb5-2 && \
+    apt-get install -y curl unzip && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .

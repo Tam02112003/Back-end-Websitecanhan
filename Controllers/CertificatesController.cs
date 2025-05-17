@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
 using Websitecanhan.Models;
 
 namespace Websitecanhan.Controllers
@@ -9,9 +9,9 @@ namespace Websitecanhan.Controllers
     [ApiController]
     public class CertificatesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IDynamoDBContext _context;
 
-        public CertificatesController(AppDbContext context)
+        public CertificatesController(IDynamoDBContext context)
         {
             _context = context;
         }
@@ -19,7 +19,9 @@ namespace Websitecanhan.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Certificate>>> GetCertificates()
         {
-            return await _context.Certificates.ToListAsync();
+            var conditions = new List<ScanCondition>();
+            var certificates = await _context.ScanAsync<Certificate>(conditions).GetRemainingAsync();
+            return certificates;
         }
 
         [HttpGet("{id}")]
@@ -27,68 +29,62 @@ namespace Websitecanhan.Controllers
         {
             try
             {
-                var certificate = await _context.Certificates.FindAsync(id);
+                var certificate = await _context.LoadAsync<Certificate>(id);
                 if (certificate == null) return NotFound();
                 return certificate;
-
             }
             catch (Exception ex)
             {
-                // Ghi log lỗi
                 Console.WriteLine(ex.Message);
                 return StatusCode(500, "Internal server error");
             }
-
         }
 
         [HttpPost]
         public async Task<ActionResult<Certificate>> PostCertificate(Certificate certificate)
         {
-            _context.Certificates.Add(certificate);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetCertificates), new { id = certificate.Id }, certificate);
+            await _context.SaveAsync(certificate);
+            return CreatedAtAction(nameof(GetCertificate), new { id = certificate.Id }, certificate);
         }
 
-        [HttpPut]
-        public async Task<IActionResult> PutCertificate([FromHeader(Name = "X-Project-ID")] int id, [FromBody] Certificate certificate)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCertificate(int id, Certificate certificate)
         {
-            // Kiểm tra xem bản ghi có tồn tại không
-            var existingCertificate = await _context.Certificates.FindAsync(id);
-            if (existingCertificate == null)
+            if (id != certificate.Id)
             {
-                return NotFound(); // Trả về 404 nếu không tìm thấy bản ghi
+                return BadRequest();
             }
 
-            // Kiểm tra xác thực mô hình
+            var existingCertificate = await _context.LoadAsync<Certificate>(id);
+            if (existingCertificate == null)
+            {
+                return NotFound();
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // Cập nhật các thuộc tính của certificate
-            existingCertificate.Name = certificate.Name;
-            existingCertificate.Year = certificate.Year;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _context.SaveAsync(certificate);
             }
-            catch (DbUpdateConcurrencyException)
+            catch
             {
-                return StatusCode(500, "An error occurred while updating the certificate."); // Trả về lỗi 500 nếu có lỗi
+                return StatusCode(500, "An error occurred while updating the certificate.");
             }
 
             return NoContent();
         }
-        
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCertificate(int id)
         {
-            var certificate = await _context.Certificates.FindAsync(id);
+            var certificate = await _context.LoadAsync<Certificate>(id);
             if (certificate == null) return NotFound();
 
-            _context.Certificates.Remove(certificate);
-            await _context.SaveChangesAsync();
+            await _context.DeleteAsync(certificate);
             return NoContent();
         }
     }
