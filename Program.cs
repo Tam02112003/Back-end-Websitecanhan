@@ -4,13 +4,19 @@ using Microsoft.OpenApi.Models;
 using Amazon.DynamoDBv2;
 using Amazon;
 using Amazon.DynamoDBv2.DataModel;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure AWS DynamoDB
 builder.Services.AddAWSService<IAmazonDynamoDB>();
 builder.Services.AddSingleton<IDynamoDBContext, DynamoDBContext>();
-
+builder.Services.AddSingleton(new Cloudinary(new Account(
+    builder.Configuration["Cloudinary:CloudName"],
+    builder.Configuration["Cloudinary:ApiKey"],
+    builder.Configuration["Cloudinary:ApiSecret"]
+)));
 // Register Swagger
 builder.Services.AddSwaggerGen(c =>
 {
@@ -22,7 +28,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowGitHubPages",
         builder => builder
-            .WithOrigins("https://tam02112003.github.io")
+            .WithOrigins("https://tam02112003.github.io", "http://localhost:3000", "https://localhost:3000")
             .AllowAnyMethod()
             .AllowAnyHeader());
 });

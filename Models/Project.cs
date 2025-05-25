@@ -24,6 +24,12 @@ namespace Websitecanhan.Models
         public string Technologies { get; set; }
 
         [DynamoDBProperty]
+        public string ImageUrl { get; set; }  // Lưu URL ảnh từ Cloudinary
+
+        [DynamoDBProperty]
+        public string ImagePublicId { get; set; }
+
+        [DynamoDBProperty]
         public string GitHubLink { get; set; }
     }
 }
