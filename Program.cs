@@ -32,7 +32,7 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
-
+builder.Configuration.AddEnvironmentVariables();
 // Register services for Controllers
 builder.Services.AddControllers();
 
